@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>賓果成就獎勵系統</title>
+    <style>
+        :root {
+            --primary-color: #d4af37;
+            --bg-color: #fdf6e3;
+            --cell-done: #88aa88;
+            --cell-pending: #ffffff;
+            --text-color: #5d4037;
+        }
+        body { font-family: sans-serif; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 20px; color: var(--text-color); }
+        .date-display { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: var(--primary-color); }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 90vw; max-width: 350px; min-height: 350px; margin-bottom: 20px; }
+        .cell { background: var(--cell-pending); border: 2px solid var(--primary-color); border-radius: 8px; display: flex; justify-content: center; align-items: center; text-align: center; padding: 10px; font-size: 14px; cursor: pointer; min-height: 100px; position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+        .cell.completed { background: var(--cell-done); color: white; text-decoration: line-through; }
+        .edit-icon { position: absolute; top: 5px; right: 5px; font-size: 14px; color: var(--primary-color); padding: 5px; }
+        .section { width: 90vw; max-width: 350px; background: white; padding: 15px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; border-left: 4px solid var(--primary-color); padding-left: 10px; font-size: 16px; }
+        .stat-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #eee; }
+        .action-btn { margin-top: 10px; padding: 15px; background: var(--primary-color); border: none; color: white; border-radius: 5px; font-weight: bold; width: 100%; cursor: pointer; }
+        
+        /* 獎勵清單樣式 */
+        .reward-input-group { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; }
+        .reward-input-group label { width: 80px; }
+        .reward-input-group input { flex-grow: 1; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="date-display" id="todayDate"></div>
+    <div class="grid" id="bingoGrid"></div>
+
+    <div style="width: 100%; max-width: 350px; text-align: center;">
+        <p>今日進度: <span id="doneCount">0</span> / 9 | 連線數: <span id="lineCount">0</span></p>
+        <button class="action-btn" onclick="manualSave()">✅ 完成今日，結算紀錄</button>
+    </div>
+
+    <div class="section">
+        <h3>🎁 自定義賓果獎勵</h3>
+        <div id="rewardSettings">
+            <div id="lineRewards"></div>
+            <div class="reward-input-group">
+                <label><b>九宮格全滿</b></label>
+                <input type="text" id="reward-full" placeholder="設定全滿獎勵..." onchange="saveRewards()">
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🏆 累計成就榜</h3>
+        <div id="taskStatsList"></div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const todayStr = new Date().toLocaleDateString();
+            document.getElementById('todayDate').innerText = "📅 " + todayStr;
+
+            let tasks = JSON.parse(localStorage.getItem('bingoTasks')) || ["任務1", "任務2", "任務3", "任務4", "任務5", "任務6", "任務7", "任務8", "任務9"];
+            let status = JSON.parse(localStorage.getItem('bingoStatus')) || new Array(9).fill(false);
+            let history = JSON.parse(localStorage.getItem('bingoHistory')) || [];
+            let taskStats = JSON.parse(localStorage.getItem('taskStats')) || {};
+            
+            // 初始化獎勵資料 (1-8 條線 + 全滿)
+            let rewards = JSON.parse(localStorage.getItem('bingoRewards')) || {
+                lines: new Array(8).fill("小獎勵"),
+                full: "終極大獎勵！"
+            };
+
+            // 建立獎勵輸入框
+            const lineRewardsDiv = document.getElementById('lineRewards');
+            for(let i=1; i<=8; i++) {
+                lineRewardsDiv.innerHTML += `
+                    <div class="reward-input-group">
+                        <label>${i} 條線獎勵</label>
+                        <input type="text" id="reward-line-${i}" value="${rewards.lines[i-1]}" onchange="saveRewards()">
+                    </div>`;
+            }
+            document.getElementById('reward-full').value = rewards.full;
+
+            window.saveRewards = function() {
+                for(let i=1; i<=8; i++) {
+                    rewards.lines[i-1] = document.getElementById(`reward-line-${i}`).value;
+                }
+                rewards.full = document.getElementById('reward-full').value;
+                localStorage.setItem('bingoRewards', JSON.stringify(rewards));
+            };
+
+            function checkLines() {
+                const wins = [
+                    [0,1,2], [3,4,5], [6,7,8], // 橫
+                    [0,3,6], [1,4,7], [2,5,8], // 直
+                    [0,4,8], [2,4,6]           // 斜
+                ];
+                let count = 0;
+                wins.forEach(combo => {
+                    if (status[combo[0]] && status[combo[1]] && status[combo[2]]) count++;
+                });
+                return count;
+            }
+
+            function render() {
+                const grid = document.getElementById('bingoGrid');
+                grid.innerHTML = '';
+                let done = 0;
+                
+                tasks.forEach((text, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${status[i] ? 'completed' : ''}`;
+                    cell.innerHTML = `<span>${text}</span><div class="edit-icon">✎</div>`;
+                    
+                    cell.onclick = function() {
+                        const oldLines = checkLines();
+                        status[i] = !status[i];
+                        const newLines = checkLines();
+                        const isFull = status.every(s => s === true);
+                        
+                        // 彈出獎勵邏輯
+                        if (isFull) {
+                            alert("✨【九宮格大滿貫】✨\n" + rewards.full);
+                        } else if (newLines > oldLines) {
+                            alert(`🎉 達成 ${newLines} 條連線！\n獎勵：${rewards.lines[newLines-1]}`);
+                        }
+
+                        localStorage.setItem('bingoStatus', JSON.stringify(status));
+                        render();
+                    };
+
+                    const editIcon = cell.querySelector('.edit-icon');
+                    editIcon.onclick = function(e) {
+                        e.stopPropagation();
+                        const val = prompt("修改任務:", tasks[i]);
+                        if (val) {
+                            tasks[i] = val;
+                            localStorage.setItem('bingoTasks', JSON.stringify(tasks));
+                            render();
+                        }
+                    };
+
+                    grid.appendChild(cell);
+                    if(status[i]) done++;
+                });
+
+                document.getElementById('doneCount').innerText = done;
+                document.getElementById('lineCount').innerText = checkLines();
+                renderTaskStats();
+            }
+
+            function processEndOfDay(dateLabel) {
+                status.forEach((isDone, index) => {
+                    if(isDone) {
+                        const name = tasks[index];
+                        taskStats[name] = (taskStats[name] || 0) + 1;
+                    }
+                });
+                history.unshift({ date: dateLabel, count: status.filter(s=>s).length });
+                status = new Array(9).fill(false);
+                localStorage.setItem('taskStats', JSON.stringify(taskStats));
+                localStorage.setItem('bingoHistory', JSON.stringify(history));
+                localStorage.setItem('bingoStatus', JSON.stringify(status));
+            }
+
+            function renderTaskStats() {
+                const list = document.getElementById('taskStatsList');
+                list.innerHTML = '';
+                Object.entries(taskStats).sort((a,b)=>b[1]-a[1]).forEach(([name, count]) => {
+                    list.innerHTML += `<div class="stat-item"><span>${name}</span><span style="color:#88aa88;font-weight:bold">${count} 次</span></div>`;
+                });
+            }
+
+            window.manualSave = function() {
+                if(confirm("結算後將重置格子，並累計完成次數。確定嗎？")) {
+                    processEndOfDay(new Date().toLocaleDateString());
+                    render();
+                }
+            };
+
+            render();
+        };
+    </script>
+</body>
+</html>
