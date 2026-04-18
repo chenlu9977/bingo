@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>賓果成就獎勵系統</title>
+    <title>7/5 考前衝刺賓果系統</title>
     <style>
         :root {
             --primary-color: #d4af37;
@@ -22,11 +22,12 @@
         h3 { margin-top: 0; border-left: 4px solid var(--primary-color); padding-left: 10px; font-size: 16px; }
         .stat-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #eee; }
         .action-btn { margin-top: 10px; padding: 15px; background: var(--primary-color); border: none; color: white; border-radius: 5px; font-weight: bold; width: 100%; cursor: pointer; }
-        
-        /* 獎勵清單樣式 */
         .reward-input-group { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; }
         .reward-input-group label { width: 80px; }
         .reward-input-group input { flex-grow: 1; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .history-bar { display: flex; align-items: center; margin-bottom: 8px; }
+        .bar-bg { flex-grow: 1; height: 10px; background: #eee; border-radius: 5px; margin: 0 10px; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--cell-done); transition: width 0.3s; }
     </style>
 </head>
 <body>
@@ -36,23 +37,22 @@
 
     <div style="width: 100%; max-width: 350px; text-align: center;">
         <p>今日進度: <span id="doneCount">0</span> / 9 | 連線數: <span id="lineCount">0</span></p>
-        <button class="action-btn" onclick="manualSave()">✅ 完成今日，結算紀錄</button>
+        <button class="action-btn" onclick="manualSave()">✅ 結算今日進度 (不重置格子)</button>
     </div>
 
     <div class="section">
         <h3>🎁 自定義賓果獎勵</h3>
-        <div id="rewardSettings">
-            <div id="lineRewards"></div>
-            <div class="reward-input-group">
-                <label><b>九宮格全滿</b></label>
-                <input type="text" id="reward-full" placeholder="設定全滿獎勵..." onchange="saveRewards()">
-            </div>
-        </div>
+        <div id="rewardSettings"><div id="lineRewards"></div><div class="reward-input-group"><label><b>九宮格全滿</b></label><input type="text" id="reward-full" onchange="saveRewards()"></div></div>
     </div>
 
     <div class="section">
-        <h3>🏆 累計成就榜</h3>
+        <h3>🏆 累計成就榜 (總次數)</h3>
         <div id="taskStatsList"></div>
+    </div>
+
+    <div class="section">
+        <h3>📊 每日趨勢</h3>
+        <div id="historyList"></div>
     </div>
 
     <script>
@@ -60,46 +60,29 @@
             const todayStr = new Date().toLocaleDateString();
             document.getElementById('todayDate').innerText = "📅 " + todayStr;
 
-            let tasks = JSON.parse(localStorage.getItem('bingoTasks')) || ["任務1", "任務2", "任務3", "任務4", "任務5", "任務6", "任務7", "任務8", "任務9"];
+            let tasks = JSON.parse(localStorage.getItem('bingoTasks')) || Array(9).fill("新任務");
             let status = JSON.parse(localStorage.getItem('bingoStatus')) || new Array(9).fill(false);
+            let syncedStatus = JSON.parse(localStorage.getItem('syncedStatus')) || new Array(9).fill(false);
             let history = JSON.parse(localStorage.getItem('bingoHistory')) || [];
             let taskStats = JSON.parse(localStorage.getItem('taskStats')) || {};
-            
-            // 初始化獎勵資料 (1-8 條線 + 全滿)
-            let rewards = JSON.parse(localStorage.getItem('bingoRewards')) || {
-                lines: new Array(8).fill("小獎勵"),
-                full: "終極大獎勵！"
-            };
+            let rewards = JSON.parse(localStorage.getItem('bingoRewards')) || { lines: Array(8).fill("小獎勵"), full: "大獎勵" };
 
-            // 建立獎勵輸入框
             const lineRewardsDiv = document.getElementById('lineRewards');
             for(let i=1; i<=8; i++) {
-                lineRewardsDiv.innerHTML += `
-                    <div class="reward-input-group">
-                        <label>${i} 條線獎勵</label>
-                        <input type="text" id="reward-line-${i}" value="${rewards.lines[i-1]}" onchange="saveRewards()">
-                    </div>`;
+                lineRewardsDiv.innerHTML += `<div class="reward-input-group"><label>${i} 條線</label><input type="text" id="reward-line-${i}" value="${rewards.lines[i-1]}" onchange="saveRewards()"></div>`;
             }
             document.getElementById('reward-full').value = rewards.full;
 
             window.saveRewards = function() {
-                for(let i=1; i<=8; i++) {
-                    rewards.lines[i-1] = document.getElementById(`reward-line-${i}`).value;
-                }
+                for(let i=1; i<=8; i++) rewards.lines[i-1] = document.getElementById(`reward-line-${i}`).value;
                 rewards.full = document.getElementById('reward-full').value;
                 localStorage.setItem('bingoRewards', JSON.stringify(rewards));
             };
 
             function checkLines() {
-                const wins = [
-                    [0,1,2], [3,4,5], [6,7,8], // 橫
-                    [0,3,6], [1,4,7], [2,5,8], // 直
-                    [0,4,8], [2,4,6]           // 斜
-                ];
+                const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
                 let count = 0;
-                wins.forEach(combo => {
-                    if (status[combo[0]] && status[combo[1]] && status[combo[2]]) count++;
-                });
+                wins.forEach(c => { if(status[c[0]] && status[c[1]] && status[c[2]]) count++; });
                 return count;
             }
 
@@ -107,77 +90,99 @@
                 const grid = document.getElementById('bingoGrid');
                 grid.innerHTML = '';
                 let done = 0;
-                
                 tasks.forEach((text, i) => {
                     const cell = document.createElement('div');
                     cell.className = `cell ${status[i] ? 'completed' : ''}`;
                     cell.innerHTML = `<span>${text}</span><div class="edit-icon">✎</div>`;
-                    
                     cell.onclick = function() {
-                        const oldLines = checkLines();
+                        const oldL = checkLines();
                         status[i] = !status[i];
-                        const newLines = checkLines();
-                        const isFull = status.every(s => s === true);
-                        
-                        // 彈出獎勵邏輯
-                        if (isFull) {
-                            alert("✨【九宮格大滿貫】✨\n" + rewards.full);
-                        } else if (newLines > oldLines) {
-                            alert(`🎉 達成 ${newLines} 條連線！\n獎勵：${rewards.lines[newLines-1]}`);
-                        }
-
+                        const newL = checkLines();
+                        if (status.every(s => s === true)) alert("✨【九宮格大滿貫】✨\n" + rewards.full);
+                        else if (newL > oldL) alert(`🎉 達成 ${newL} 條連線！\n獎勵：${rewards.lines[newL-1]}`);
                         localStorage.setItem('bingoStatus', JSON.stringify(status));
                         render();
                     };
-
-                    const editIcon = cell.querySelector('.edit-icon');
-                    editIcon.onclick = function(e) {
+                    cell.querySelector('.edit-icon').onclick = (e) => {
                         e.stopPropagation();
-                        const val = prompt("修改任務:", tasks[i]);
-                        if (val) {
-                            tasks[i] = val;
-                            localStorage.setItem('bingoTasks', JSON.stringify(tasks));
-                            render();
+                        const v = prompt("修改:", tasks[i]);
+                        if(v) { 
+                            tasks[i] = v; 
+                            syncedStatus[i] = false;
+                            localStorage.setItem('bingoTasks', JSON.stringify(tasks)); 
+                            localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
+                            render(); 
                         }
                     };
-
                     grid.appendChild(cell);
                     if(status[i]) done++;
                 });
-
                 document.getElementById('doneCount').innerText = done;
                 document.getElementById('lineCount').innerText = checkLines();
                 renderTaskStats();
+                renderHistory();
             }
 
-            function processEndOfDay(dateLabel) {
+            function processEndOfDay(dateLabel, clearGrid) {
                 status.forEach((isDone, index) => {
-                    if(isDone) {
+                    if(isDone && !syncedStatus[index]) {
                         const name = tasks[index];
                         taskStats[name] = (taskStats[name] || 0) + 1;
+                        syncedStatus[index] = true;
                     }
                 });
-                history.unshift({ date: dateLabel, count: status.filter(s=>s).length });
-                status = new Array(9).fill(false);
+
+                const doneCount = status.filter(s => s).length;
+                if (history.length > 0 && history[0].date === dateLabel) {
+                    history[0].count = doneCount;
+                } else {
+                    history.unshift({ date: dateLabel, count: doneCount });
+                }
+                if (history.length > 30) history.pop();
+
                 localStorage.setItem('taskStats', JSON.stringify(taskStats));
                 localStorage.setItem('bingoHistory', JSON.stringify(history));
-                localStorage.setItem('bingoStatus', JSON.stringify(status));
+                localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
+                
+                if (clearGrid) {
+                    status = new Array(9).fill(false);
+                    syncedStatus = new Array(9).fill(false);
+                    localStorage.setItem('bingoStatus', JSON.stringify(status));
+                    localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
+                }
             }
 
             function renderTaskStats() {
                 const list = document.getElementById('taskStatsList');
                 list.innerHTML = '';
-                Object.entries(taskStats).sort((a,b)=>b[1]-a[1]).forEach(([name, count]) => {
-                    list.innerHTML += `<div class="stat-item"><span>${name}</span><span style="color:#88aa88;font-weight:bold">${count} 次</span></div>`;
+                Object.entries(taskStats).sort((a,b)=>b[1]-a[1]).forEach(([n, c]) => {
+                    list.innerHTML += `<div class="stat-item"><span>${n}</span><span style="color:#88aa88;font-weight:bold">${c} 次</span></div>`;
+                });
+            }
+
+            function renderHistory() {
+                const list = document.getElementById('historyList');
+                list.innerHTML = '';
+                history.slice(0, 5).forEach(item => {
+                    const per = (item.count / 9) * 100;
+                    list.innerHTML += `<div class="history-bar"><div style="font-size:10px; width:65px">${item.date}</div><div class="bar-bg"><div class="bar-fill" style="width:${per}%"></div></div><div style="font-size:10px; width:20px">${item.count}</div></div>`;
                 });
             }
 
             window.manualSave = function() {
-                if(confirm("結算後將重置格子，並累計完成次數。確定嗎？")) {
-                    processEndOfDay(new Date().toLocaleDateString());
-                    render();
-                }
+                const done = status.filter(s=>s).length;
+                if(done === 0) { alert("目前沒有完成任何格子喔！"); return; }
+                processEndOfDay(todayStr, false); // false = 不清空內容
+                alert(`✅ 結算成功！\n目前的成就已存入紀錄，您可以繼續完成剩餘格子。`);
+                render();
             };
+
+            let lastOpen = localStorage.getItem('lastOpenDate');
+            if (lastOpen && lastOpen !== todayStr) {
+                processEndOfDay(lastOpen, true); // 只有跨日才會自動清空 (true)
+                localStorage.setItem('lastOpenDate', todayStr);
+            }
+            localStorage.setItem('lastOpenDate', todayStr);
 
             render();
         };
