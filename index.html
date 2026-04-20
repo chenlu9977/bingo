@@ -235,17 +235,26 @@
             }
         }
 
-        async function fetchLeaderboard() {
-            try {
-                const res = await fetch(GAS_URL);
-                const data = await res.json();
-                document.getElementById('leaderboard').innerHTML = data.map((item, idx) => `
-                    <div class="rank-item">
-                        <span>${idx + 1}. ${item.name}</span>
-                        <span style="color:#d4af37; font-weight:bold;">${item.score} pts</span>
-                    </div>`).join('');
-            } catch(e) { document.getElementById('leaderboard').innerText = "暫時無法讀取排行..."; }
+async function fetchLeaderboard() {
+    try {
+        // 加上 cache: 'no-cache' 確保每次都讀到最新的排名
+        const res = await fetch(GAS_URL, { cache: 'no-cache' });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const list = document.getElementById('leaderboard');
+        if (data.length === 0) {
+            list.innerHTML = "尚未有排名數據";
+            return;
         }
+        list.innerHTML = data.map((item, idx) => `
+            <div class="rank-item">
+                <span>${idx + 1}. ${item.name}</span>
+                <span style="color:#d4af37; font-weight:bold;">${item.score} pts</span>
+            </div>`).join('');
+    } catch(e) { 
+        document.getElementById('leaderboard').innerText = "連線中或暫無數據..."; 
+    }
+}
 
         function exportData() {
             const data = btoa(unescape(encodeURIComponent(JSON.stringify({ tasks, status, syncedStatus, history, taskStats, totalScore, userName, rewards }))));
