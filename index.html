@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>7/5 考前衝刺賓果系統</title>
+    <title>7/5 考前衝刺：賓果競技場</title>
     <style>
         :root {
             --primary-color: #d4af37;
@@ -12,180 +12,261 @@
             --cell-pending: #ffffff;
             --text-color: #5d4037;
         }
-        body { font-family: sans-serif; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 20px; color: var(--text-color); }
+        body { font-family: 'PingFang TC', sans-serif; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 20px; color: var(--text-color); margin: 0; }
         .date-display { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: var(--primary-color); }
+        
+        /* 賓果盤 */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 90vw; max-width: 350px; min-height: 350px; margin-bottom: 20px; }
-        .cell { background: var(--cell-pending); border: 2px solid var(--primary-color); border-radius: 8px; display: flex; justify-content: center; align-items: center; text-align: center; padding: 10px; font-size: 14px; cursor: pointer; min-height: 100px; position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+        .cell { background: var(--cell-pending); border: 2px solid var(--primary-color); border-radius: 8px; display: flex; justify-content: center; align-items: center; text-align: center; padding: 10px; font-size: 14px; cursor: pointer; min-height: 100px; position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); transition: 0.3s; }
         .cell.completed { background: var(--cell-done); color: white; text-decoration: line-through; }
-        .edit-icon { position: absolute; top: 5px; right: 5px; font-size: 14px; color: var(--primary-color); padding: 5px; }
-        .section { width: 90vw; max-width: 350px; background: white; padding: 15px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        h3 { margin-top: 0; border-left: 4px solid var(--primary-color); padding-left: 10px; font-size: 16px; }
-        .stat-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #eee; }
-        .action-btn { margin-top: 10px; padding: 15px; background: var(--primary-color); border: none; color: white; border-radius: 5px; font-weight: bold; width: 100%; cursor: pointer; }
-        .reward-input-group { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; }
-        .reward-input-group label { width: 80px; }
-        .reward-input-group input { flex-grow: 1; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .edit-icon { position: absolute; top: 5px; right: 5px; font-size: 14px; color: var(--primary-color); padding: 5px; border-radius: 4px; background: rgba(255,255,255,0.5); }
+        
+        /* 區塊樣式 */
+        .section { width: 90vw; max-width: 350px; background: white; padding: 15px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); box-sizing: border-box; }
+        h3 { margin: 0 0 10px 0; border-left: 4px solid var(--primary-color); padding-left: 10px; font-size: 16px; }
+        
+        /* 按鈕與輸入 */
+        .action-btn { margin-top: 10px; padding: 15px; background: var(--primary-color); border: none; color: white; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 16px; box-shadow: 0 4px 0 #b8962d; active { transform: translateY(2px); box-shadow: 0 2px 0 #b8962d; } }
+        input[type="text"], textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        
+        /* 排行榜與統計 */
+        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .stat-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
         .history-bar { display: flex; align-items: center; margin-bottom: 8px; }
         .bar-bg { flex-grow: 1; height: 10px; background: #eee; border-radius: 5px; margin: 0 10px; overflow: hidden; }
-        .bar-fill { height: 100%; background: var(--cell-done); transition: width 0.3s; }
+        .bar-fill { height: 100%; background: var(--cell-done); transition: width 0.5s; }
+        
+        .score-board { text-align: center; margin-bottom: 15px; }
+        .pts-badge { background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px; margin-left: 5px; }
     </style>
 </head>
 <body>
 
-    <div class="date-display" id="todayDate"></div>
+    <div class="date-display" id="todayDate">📅 Loading...</div>
+    
+    <div class="score-board">
+        <div id="personalScore" style="font-size: 1.1rem; font-weight: bold;">累計積分：0 <span class="pts-badge">Rank Up!</span></div>
+        <div style="font-size: 12px; color: #888; margin-top: 4px;">完成+10 | 連線+50 | 全滿+200</div>
+    </div>
+
     <div class="grid" id="bingoGrid"></div>
 
-    <div style="width: 100%; max-width: 350px; text-align: center;">
-        <p>今日進度: <span id="doneCount">0</span> / 9 | 連線數: <span id="lineCount">0</span></p>
-        <button class="action-btn" onclick="manualSave()">✅ 結算今日進度 (不重置格子)</button>
+    <div style="width: 90vw; max-width: 350px;">
+        <button class="action-btn" onclick="manualSave()">✅ 結算今日進度並同步排行</button>
+        <p style="font-size: 11px; color: #999; text-align: center;">(結算會更新積分與統計，但不會重置今日格子)</p>
+    </div>
+
+    <div class="section">
+        <h3>🏆 考前衝刺排行榜 (Top 10)</h3>
+        <input type="text" id="userName" placeholder="請輸入您的競賽暱稱..." onchange="saveUserName()">
+        <div id="leaderboard">讀取中...</div>
     </div>
 
     <div class="section">
         <h3>🎁 自定義賓果獎勵</h3>
-        <div id="rewardSettings"><div id="lineRewards"></div><div class="reward-input-group"><label><b>九宮格全滿</b></label><input type="text" id="reward-full" onchange="saveRewards()"></div></div>
+        <div id="rewardSettings">
+            <div id="lineRewards"></div>
+            <div style="display:flex; align-items:center; margin-top:5px;">
+                <label style="font-size:13px; width:80px;">九宮格全滿</label>
+                <input type="text" id="reward-full" onchange="saveRewards()" style="margin:0;">
+            </div>
+        </div>
     </div>
 
     <div class="section">
-        <h3>🏆 累計成就榜 (總次數)</h3>
+        <h3>📊 累計成就榜 (次數)</h3>
         <div id="taskStatsList"></div>
     </div>
 
     <div class="section">
-        <h3>📊 每日趨勢</h3>
+        <h3>📈 每日完成趨勢</h3>
         <div id="historyList"></div>
     </div>
 
+    <div class="section">
+        <h3>💾 資料備份與恢復</h3>
+        <button class="action-btn" style="background:#666; font-size:12px; padding:8px;" onclick="exportData()">產生備份代碼</button>
+        <textarea id="backupArea" placeholder="在此貼上備份代碼..."></textarea>
+        <button class="action-btn" style="background:#555; font-size:12px; padding:8px;" onclick="importData()">恢復備份紀錄</button>
+    </div>
+
     <script>
+        // ======= ⚠️ 請在此貼入您的 Google Apps Script URL =======
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwwCH3-ZFmVu3JwVw0LvnD-RGPgqBjBya4uvuGzq3_mwf5JnESt3rAYJIeFUvWTtIn9/exec"; 
+
+        const todayStr = new Date().toLocaleDateString();
+        document.getElementById('todayDate').innerText = "📅 今天是 " + todayStr;
+
+        // 資料初始化
+        let tasks = JSON.parse(localStorage.getItem('bingoTasks')) || Array(9).fill("新任務");
+        let status = JSON.parse(localStorage.getItem('bingoStatus')) || new Array(9).fill(false);
+        let syncedStatus = JSON.parse(localStorage.getItem('syncedStatus')) || new Array(9).fill(false);
+        let history = JSON.parse(localStorage.getItem('bingoHistory')) || [];
+        let taskStats = JSON.parse(localStorage.getItem('taskStats')) || {};
+        let totalScore = parseInt(localStorage.getItem('bingoTotalScore')) || 0;
+        let userName = localStorage.getItem('bingoUserName') || "";
+        let rewards = JSON.parse(localStorage.getItem('bingoRewards')) || { lines: Array(8).fill("小獎勵"), full: "終極大禮！" };
+
         window.onload = function() {
-            const todayStr = new Date().toLocaleDateString();
-            document.getElementById('todayDate').innerText = "📅 " + todayStr;
-
-            let tasks = JSON.parse(localStorage.getItem('bingoTasks')) || Array(9).fill("新任務");
-            let status = JSON.parse(localStorage.getItem('bingoStatus')) || new Array(9).fill(false);
-            let syncedStatus = JSON.parse(localStorage.getItem('syncedStatus')) || new Array(9).fill(false);
-            let history = JSON.parse(localStorage.getItem('bingoHistory')) || [];
-            let taskStats = JSON.parse(localStorage.getItem('taskStats')) || {};
-            let rewards = JSON.parse(localStorage.getItem('bingoRewards')) || { lines: Array(8).fill("小獎勵"), full: "大獎勵" };
-
+            document.getElementById('userName').value = userName;
+            document.getElementById('personalScore').innerHTML = `累計積分：${totalScore} <span class="pts-badge">Rank Up!</span>`;
+            
+            // 初始化獎勵輸入框
             const lineRewardsDiv = document.getElementById('lineRewards');
             for(let i=1; i<=8; i++) {
-                lineRewardsDiv.innerHTML += `<div class="reward-input-group"><label>${i} 條線</label><input type="text" id="reward-line-${i}" value="${rewards.lines[i-1]}" onchange="saveRewards()"></div>`;
+                lineRewardsDiv.innerHTML += `
+                    <div style="display:flex; align-items:center; margin-bottom:5px;">
+                        <label style="font-size:12px; width:80px;">${i} 條線獎勵</label>
+                        <input type="text" id="reward-line-${i}" value="${rewards.lines[i-1]}" onchange="saveRewards()" style="margin:0;">
+                    </div>`;
             }
             document.getElementById('reward-full').value = rewards.full;
 
-            window.saveRewards = function() {
-                for(let i=1; i<=8; i++) rewards.lines[i-1] = document.getElementById(`reward-line-${i}`).value;
-                rewards.full = document.getElementById('reward-full').value;
-                localStorage.setItem('bingoRewards', JSON.stringify(rewards));
-            };
-
-            function checkLines() {
-                const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-                let count = 0;
-                wins.forEach(c => { if(status[c[0]] && status[c[1]] && status[c[2]]) count++; });
-                return count;
-            }
-
-            function render() {
-                const grid = document.getElementById('bingoGrid');
-                grid.innerHTML = '';
-                let done = 0;
-                tasks.forEach((text, i) => {
-                    const cell = document.createElement('div');
-                    cell.className = `cell ${status[i] ? 'completed' : ''}`;
-                    cell.innerHTML = `<span>${text}</span><div class="edit-icon">✎</div>`;
-                    cell.onclick = function() {
-                        const oldL = checkLines();
-                        status[i] = !status[i];
-                        const newL = checkLines();
-                        if (status.every(s => s === true)) alert("✨【九宮格大滿貫】✨\n" + rewards.full);
-                        else if (newL > oldL) alert(`🎉 達成 ${newL} 條連線！\n獎勵：${rewards.lines[newL-1]}`);
-                        localStorage.setItem('bingoStatus', JSON.stringify(status));
-                        render();
-                    };
-                    cell.querySelector('.edit-icon').onclick = (e) => {
-                        e.stopPropagation();
-                        const v = prompt("修改:", tasks[i]);
-                        if(v) { 
-                            tasks[i] = v; 
-                            syncedStatus[i] = false;
-                            localStorage.setItem('bingoTasks', JSON.stringify(tasks)); 
-                            localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
-                            render(); 
-                        }
-                    };
-                    grid.appendChild(cell);
-                    if(status[i]) done++;
-                });
-                document.getElementById('doneCount').innerText = done;
-                document.getElementById('lineCount').innerText = checkLines();
-                renderTaskStats();
-                renderHistory();
-            }
-
-            function processEndOfDay(dateLabel, clearGrid) {
-                status.forEach((isDone, index) => {
-                    if(isDone && !syncedStatus[index]) {
-                        const name = tasks[index];
-                        taskStats[name] = (taskStats[name] || 0) + 1;
-                        syncedStatus[index] = true;
-                    }
-                });
-
-                const doneCount = status.filter(s => s).length;
-                if (history.length > 0 && history[0].date === dateLabel) {
-                    history[0].count = doneCount;
-                } else {
-                    history.unshift({ date: dateLabel, count: doneCount });
-                }
-                if (history.length > 30) history.pop();
-
-                localStorage.setItem('taskStats', JSON.stringify(taskStats));
-                localStorage.setItem('bingoHistory', JSON.stringify(history));
-                localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
-                
-                if (clearGrid) {
-                    status = new Array(9).fill(false);
-                    syncedStatus = new Array(9).fill(false);
-                    localStorage.setItem('bingoStatus', JSON.stringify(status));
-                    localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
-                }
-            }
-
-            function renderTaskStats() {
-                const list = document.getElementById('taskStatsList');
-                list.innerHTML = '';
-                Object.entries(taskStats).sort((a,b)=>b[1]-a[1]).forEach(([n, c]) => {
-                    list.innerHTML += `<div class="stat-item"><span>${n}</span><span style="color:#88aa88;font-weight:bold">${c} 次</span></div>`;
-                });
-            }
-
-            function renderHistory() {
-                const list = document.getElementById('historyList');
-                list.innerHTML = '';
-                history.slice(0, 5).forEach(item => {
-                    const per = (item.count / 9) * 100;
-                    list.innerHTML += `<div class="history-bar"><div style="font-size:10px; width:65px">${item.date}</div><div class="bar-bg"><div class="bar-fill" style="width:${per}%"></div></div><div style="font-size:10px; width:20px">${item.count}</div></div>`;
-                });
-            }
-
-            window.manualSave = function() {
-                const done = status.filter(s=>s).length;
-                if(done === 0) { alert("目前沒有完成任何格子喔！"); return; }
-                processEndOfDay(todayStr, false); // false = 不清空內容
-                alert(`✅ 結算成功！\n目前的成就已存入紀錄，您可以繼續完成剩餘格子。`);
-                render();
-            };
-
+            // 自動換日檢查
             let lastOpen = localStorage.getItem('lastOpenDate');
             if (lastOpen && lastOpen !== todayStr) {
-                processEndOfDay(lastOpen, true); // 只有跨日才會自動清空 (true)
-                localStorage.setItem('lastOpenDate', todayStr);
+                processEndOfDay(lastOpen, true); 
             }
             localStorage.setItem('lastOpenDate', todayStr);
 
             render();
+            fetchLeaderboard();
         };
+
+        function saveUserName() {
+            userName = document.getElementById('userName').value;
+            localStorage.setItem('bingoUserName', userName);
+        }
+
+        function saveRewards() {
+            for(let i=1; i<=8; i++) rewards.lines[i-1] = document.getElementById(`reward-line-${i}`).value;
+            rewards.full = document.getElementById('reward-full').value;
+            localStorage.setItem('bingoRewards', JSON.stringify(rewards));
+        }
+
+        function checkLines() {
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            let count = 0;
+            wins.forEach(c => { if(status[c[0]] && status[c[1]] && status[c[2]]) count++; });
+            return count;
+        }
+
+        function calculateTodayPoints() {
+            let pts = 0;
+            const done = status.filter(s=>s).length;
+            pts += done * 10;
+            pts += checkLines() * 50;
+            if(done === 9) pts += 200;
+            return pts;
+        }
+
+        function render() {
+            const grid = document.getElementById('bingoGrid');
+            grid.innerHTML = '';
+            tasks.forEach((text, i) => {
+                const cell = document.createElement('div');
+                cell.className = `cell ${status[i] ? 'completed' : ''}`;
+                cell.innerHTML = `<span>${text}</span><div class="edit-icon">✎</div>`;
+                cell.onclick = () => {
+                    const oldL = checkLines();
+                    status[i] = !status[i];
+                    const newL = checkLines();
+                    if(status.every(s=>s)) alert("🏆 大滿貫！\n" + rewards.full);
+                    else if(newL > oldL) alert(`🎉 達成 ${newL} 條連線！\n獎勵：${rewards.lines[newL-1]}`);
+                    localStorage.setItem('bingoStatus', JSON.stringify(status));
+                    render();
+                };
+                cell.querySelector('.edit-icon').onclick = (e) => {
+                    e.stopPropagation();
+                    const v = prompt("修改任務內容:", tasks[i]);
+                    if(v) { tasks[i] = v; syncedStatus[i] = false; localStorage.setItem('bingoTasks', JSON.stringify(tasks)); render(); }
+                };
+                grid.appendChild(cell);
+            });
+            renderStats();
+        }
+
+        function renderStats() {
+            document.getElementById('taskStatsList').innerHTML = Object.entries(taskStats).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="stat-item"><span>${n}</span><b>${c} 次</b></div>`).join('');
+            document.getElementById('historyList').innerHTML = history.slice(0,5).map(h => `<div class="history-bar"><div style="font-size:10px; width:65px">${h.date}</div><div class="bar-bg"><div class="bar-fill" style="width:${(h.count/9)*100}%"></div></div><div style="font-size:10px;">${h.count}</div></div>`).join('');
+        }
+
+        async function manualSave() {
+            if(!userName) { alert("請先填寫您的競賽暱稱！"); return; }
+            const todayPoints = calculateTodayPoints();
+            
+            // 處理結算邏輯
+            processEndOfDay(todayStr, false);
+            
+            // 這裡簡單化處理積分：結算時直接按比例增加積分
+            // (注意：重複結算在目前的單機邏輯中會重複加分，建議手動上傳時自己衡量)
+            totalScore += todayPoints;
+            localStorage.setItem('bingoTotalScore', totalScore);
+            document.getElementById('personalScore').innerHTML = `累計積分：${totalScore} <span class="pts-badge">Rank Up!</span>`;
+
+            try {
+                await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ name: userName, score: totalScore }) });
+                alert(`結算並同步成功！今日戰果積分：${todayPoints}`);
+                fetchLeaderboard();
+            } catch(e) { alert("同步至排行榜失敗，但本地紀錄已保存。"); }
+            render();
+        }
+
+        function processEndOfDay(dateLabel, clearGrid) {
+            status.forEach((isDone, index) => {
+                if(isDone && !syncedStatus[index]) {
+                    taskStats[tasks[index]] = (taskStats[tasks[index]] || 0) + 1;
+                    syncedStatus[index] = true;
+                }
+            });
+            const doneCount = status.filter(s=>s).length;
+            if(history.length > 0 && history[0].date === dateLabel) history[0].count = doneCount;
+            else history.unshift({ date: dateLabel, count: doneCount });
+            
+            localStorage.setItem('taskStats', JSON.stringify(taskStats));
+            localStorage.setItem('bingoHistory', JSON.stringify(history));
+            localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
+            
+            if(clearGrid) {
+                status = new Array(9).fill(false);
+                syncedStatus = new Array(9).fill(false);
+                localStorage.setItem('bingoStatus', JSON.stringify(status));
+                localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
+            }
+        }
+
+        async function fetchLeaderboard() {
+            try {
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
+                document.getElementById('leaderboard').innerHTML = data.map((item, idx) => `
+                    <div class="rank-item">
+                        <span>${idx + 1}. ${item.name}</span>
+                        <span style="color:#d4af37; font-weight:bold;">${item.score} pts</span>
+                    </div>`).join('');
+            } catch(e) { document.getElementById('leaderboard').innerText = "暫時無法讀取排行..."; }
+        }
+
+        function exportData() {
+            const data = btoa(unescape(encodeURIComponent(JSON.stringify({ tasks, status, syncedStatus, history, taskStats, totalScore, userName, rewards }))));
+            document.getElementById('backupArea').value = data;
+            alert("備份代碼已產生，請複製保存。");
+        }
+
+        function importData() {
+            try {
+                const decoded = JSON.parse(decodeURIComponent(escape(atob(document.getElementById('backupArea').value))));
+                if(confirm("確定要導入嗎？這會覆蓋目前所有進度。")) {
+                    localStorage.setItem('bingoTasks', JSON.stringify(decoded.tasks));
+                    localStorage.setItem('bingoStatus', JSON.stringify(decoded.status));
+                    localStorage.setItem('bingoHistory', JSON.stringify(decoded.history));
+                    localStorage.setItem('taskStats', JSON.stringify(decoded.taskStats));
+                    localStorage.setItem('bingoTotalScore', decoded.totalScore);
+                    localStorage.setItem('bingoUserName', decoded.userName);
+                    location.reload();
+                }
+            } catch(e) { alert("無效的代碼！"); }
+        }
     </script>
 </body>
 </html>
