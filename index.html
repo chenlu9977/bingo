@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> 每日事項：賓果競技場</title>
+    <title>全方位目標系統：賓果競技場</title>
     <style>
         :root {
             --primary-color: #d4af37;
@@ -11,270 +11,358 @@
             --cell-done: #88aa88;
             --cell-pending: #ffffff;
             --text-color: #5d4037;
+            --nav-bg: #5d4037;
         }
-        body { font-family: 'PingFang TC', sans-serif; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 20px; color: var(--text-color); margin: 0; }
-        .date-display { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: var(--primary-color); }
+        body { font-family: 'PingFang TC', sans-serif; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 20px 20px 120px 20px; color: var(--text-color); margin: 0; }
         
-        /* 賓果盤 */
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 90vw; max-width: 350px; min-height: 350px; margin-bottom: 20px; }
-        .cell { background: var(--cell-pending); border: 2px solid var(--primary-color); border-radius: 8px; display: flex; justify-content: center; align-items: center; text-align: center; padding: 10px; font-size: 14px; cursor: pointer; min-height: 100px; position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); transition: 0.3s; }
+        /* 標題與積分 */
+        .header-section { text-align: center; margin-bottom: 10px; width: 100%; }
+        .mode-title { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); margin: 5px 0; }
+        .score-board { margin-bottom: 10px; font-weight: bold; }
+        .pts-badge { background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 20px; font-size: 11px; }
+
+        /* 賓果盤容器 */
+        .grid-container { width: 95vw; max-width: 450px; min-height: 320px; margin-bottom: 15px; }
+        .grid { display: grid; gap: 8px; width: 100%; }
+        .grid-3x3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-5x5 { grid-template-columns: repeat(5, 1fr); }
+
+        .cell { background: var(--cell-pending); border: 2px solid var(--primary-color); border-radius: 6px; display: flex; justify-content: center; align-items: center; text-align: center; padding: 5px; font-size: 13px; cursor: pointer; min-height: 85px; position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); transition: 0.2s; word-break: break-all; }
+        .grid-5x5 .cell { min-height: 60px; font-size: 10px; padding: 2px; }
         .cell.completed { background: var(--cell-done); color: white; text-decoration: line-through; }
-        .edit-icon { position: absolute; top: 5px; right: 5px; font-size: 14px; color: var(--primary-color); padding: 5px; border-radius: 4px; background: rgba(255,255,255,0.5); }
-        
+        .edit-icon { position: absolute; top: 2px; right: 2px; font-size: 12px; color: var(--primary-color); padding: 2px; border-radius: 3px; background: rgba(255,255,255,0.7); z-index: 2; }
+
         /* 區塊樣式 */
-        .section { width: 90vw; max-width: 350px; background: white; padding: 15px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .section { width: 95vw; max-width: 400px; background: white; padding: 15px; border-radius: 10px; margin-top: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); box-sizing: border-box; }
         h3 { margin: 0 0 10px 0; border-left: 4px solid var(--primary-color); padding-left: 10px; font-size: 16px; }
         
-        /* 按鈕與輸入 */
-        .action-btn { margin-top: 10px; padding: 15px; background: var(--primary-color); border: none; color: white; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 16px; box-shadow: 0 4px 0 #b8962d; active { transform: translateY(2px); box-shadow: 0 2px 0 #b8962d; } }
-        input[type="text"], textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
-        
-        /* 排行榜與統計 */
-        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .stat-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
+        input[type="text"], textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .reward-group { display: flex; align-items: center; margin-bottom: 5px; font-size: 11px; }
+        .reward-group label { width: 60px; flex-shrink: 0; color: #777; }
+        .stat-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #eee; }
+
+        /* 趨勢圖 */
         .history-bar { display: flex; align-items: center; margin-bottom: 8px; }
         .bar-bg { flex-grow: 1; height: 10px; background: #eee; border-radius: 5px; margin: 0 10px; overflow: hidden; }
         .bar-fill { height: 100%; background: var(--cell-done); transition: width 0.5s; }
-        
-        .score-board { text-align: center; margin-bottom: 15px; }
-        .pts-badge { background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px; margin-left: 5px; }
+
+        /* 底部導覽列 */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--nav-bg); display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); z-index: 100; }
+        .nav-item { color: #fff; text-decoration: none; font-size: 12px; display: flex; flex-direction: column; align-items: center; opacity: 0.5; cursor: pointer; border: none; background: none; }
+        .nav-item.active { opacity: 1; color: var(--primary-color); font-weight: bold; }
+        .nav-icon { font-size: 18px; margin-bottom: 4px; }
+
+        .rank-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+        .action-btn { padding: 10px; background: var(--primary-color); border: none; color: white; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="date-display" id="todayDate">📅 Loading...</div>
-    
-    <div class="score-board">
-        <div id="personalScore" style="font-size: 1.1rem; font-weight: bold;">累計積分：0 <span class="pts-badge">Rank Up!</span></div>
-        <div style="font-size: 12px; color: #888; margin-top: 4px;">完成+10 | 連線+50 | 全滿+200</div>
+    <div class="header-section">
+        <div id="displayDate" style="font-size: 12px;">📅</div>
+        <div class="mode-title" id="modeTitle">載入中...</div>
+        <div class="score-board">
+            <span id="personalScore">積分：0</span> <span class="pts-badge">Auto Sync</span>
+        </div>
     </div>
 
-    <div class="grid" id="bingoGrid"></div>
-
-    <div style="width: 90vw; max-width: 350px;">
-        <button class="action-btn" onclick="manualSave()">✅ 結算今日進度並同步排行</button>
-        <p style="font-size: 11px; color: #999; text-align: center;">(結算會更新積分與統計，但不會重置今日格子)</p>
+    <div class="grid-container">
+        <div id="bingoGrid" class="grid"></div>
     </div>
 
     <div class="section">
         <h3>🏆 積分排行榜 (Top 10)</h3>
-        <input type="text" id="userName" placeholder="請輸入您的競賽暱稱..." onchange="saveUserName()">
+        <input type="text" id="userName" placeholder="設定您的暱稱..." onchange="saveUserName()">
         <div id="leaderboard">讀取中...</div>
     </div>
 
     <div class="section">
-        <h3>🎁 自定義賓果獎勵</h3>
-        <div id="rewardSettings">
-            <div id="lineRewards"></div>
-            <div style="display:flex; align-items:center; margin-top:5px;">
-                <label style="font-size:13px; width:80px;">九宮格全滿</label>
-                <input type="text" id="reward-full" onchange="saveRewards()" style="margin:0;">
-            </div>
-        </div>
+        <h3>🎁 <span id="rewardTypeTitle"></span>目標獎勵設定</h3>
+        <div id="rewardInputs"></div>
     </div>
 
     <div class="section">
-        <h3>📊 累計成就榜 (次數)</h3>
-        <div id="taskStatsList"></div>
+        <h3>📊 <span id="statTypeTitle"></span>累計成就榜 (次數)</h3>
+        <div id="taskStatsList">尚未有紀錄</div>
     </div>
 
     <div class="section">
-        <h3>📈 每日完成趨勢</h3>
-        <div id="historyList"></div>
+        <h3>📈 <span id="trendTypeTitle"></span>完成趨勢</h3>
+        <div id="historyList">載入中...</div>
     </div>
 
     <div class="section">
-        <h3>💾 資料備份與恢復</h3>
-        <button class="action-btn" style="background:#666; font-size:12px; padding:8px;" onclick="exportData()">產生備份代碼</button>
-        <textarea id="backupArea" placeholder="在此貼上備份代碼..."></textarea>
-        <button class="action-btn" style="background:#555; font-size:12px; padding:8px;" onclick="importData()">恢復備份紀錄</button>
+        <h3>💾 資料備份與還原</h3>
+        <button class="action-btn" style="background:#666;" onclick="exportData()">導出備份代碼</button>
+        <textarea id="backupArea" placeholder="在此貼上代碼..."></textarea>
+        <button class="action-btn" style="background:#555; margin-top:5px;" onclick="importData()">恢復紀錄</button>
     </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchMode('day')"><span class="nav-icon">☀️</span>日目標</button>
+        <button class="nav-item" onclick="switchMode('month')"><span class="nav-icon">🌙</span>月目標</button>
+        <button class="nav-item" onclick="switchMode('quarter')"><span class="nav-icon">🏔️</span>季目標</button>
+        <button class="nav-item" onclick="switchMode('year')"><span class="nav-icon">🏆</span>年目標</button>
+    </nav>
 
     <script>
-        // ======= ⚠️ 請在此貼入您的 Google Apps Script URL =======
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwwCH3-ZFmVu3JwVw0LvnD-RGPgqBjBya4uvuGzq3_mwf5JnESt3rAYJIeFUvWTtIn9/exec"; 
+        
+        let currentMode = 'day';
+        const modes = {
+            day: { size: 3, title: '每日事項', label: '日', lines: 8 },
+            month: { size: 3, title: '本月目標', label: '月', lines: 8 },
+            quarter: { size: 3, title: '季度計畫', label: '季', lines: 8 },
+            year: { size: 5, title: '年度大計', label: '年', lines: 12 }
+        };
 
-        const todayStr = new Date().toLocaleDateString();
-        document.getElementById('todayDate').innerText = "📅 今天是 " + todayStr;
-
-        // 資料初始化
-        let tasks = JSON.parse(localStorage.getItem('bingoTasks')) || Array(9).fill("新任務");
-        let status = JSON.parse(localStorage.getItem('bingoStatus')) || new Array(9).fill(false);
-        let syncedStatus = JSON.parse(localStorage.getItem('syncedStatus')) || new Array(9).fill(false);
-        let history = JSON.parse(localStorage.getItem('bingoHistory')) || [];
-        let taskStats = JSON.parse(localStorage.getItem('taskStats')) || {};
-        let totalScore = parseInt(localStorage.getItem('bingoTotalScore')) || 0;
         let userName = localStorage.getItem('bingoUserName') || "";
-        let rewards = JSON.parse(localStorage.getItem('bingoRewards')) || { lines: Array(8).fill("小獎勵"), full: "終極大禮！" };
+        let totalScore = 0;
 
         window.onload = function() {
             document.getElementById('userName').value = userName;
-            document.getElementById('personalScore').innerHTML = `累計積分：${totalScore} <span class="pts-badge">Rank Up!</span>`;
-            
-            // 初始化獎勵輸入框
-            const lineRewardsDiv = document.getElementById('lineRewards');
-            for(let i=1; i<=8; i++) {
-                lineRewardsDiv.innerHTML += `
-                    <div style="display:flex; align-items:center; margin-bottom:5px;">
-                        <label style="font-size:12px; width:80px;">${i} 條線獎勵</label>
-                        <input type="text" id="reward-line-${i}" value="${rewards.lines[i-1]}" onchange="saveRewards()" style="margin:0;">
-                    </div>`;
-            }
-            document.getElementById('reward-full').value = rewards.full;
-
-            // 自動換日檢查
-            let lastOpen = localStorage.getItem('lastOpenDate');
-            if (lastOpen && lastOpen !== todayStr) {
-                processEndOfDay(lastOpen, true); 
-            }
-            localStorage.setItem('lastOpenDate', todayStr);
-
-            render();
+            updateUI();
             fetchLeaderboard();
         };
 
-        function saveUserName() {
-            userName = document.getElementById('userName').value;
-            localStorage.setItem('bingoUserName', userName);
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            updateUI();
         }
 
-        function saveRewards() {
-            for(let i=1; i<=8; i++) rewards.lines[i-1] = document.getElementById(`reward-line-${i}`).value;
-            rewards.full = document.getElementById('reward-full').value;
-            localStorage.setItem('bingoRewards', JSON.stringify(rewards));
+        function updateUI() {
+            const config = modes[currentMode];
+            document.getElementById('modeTitle').innerText = config.title;
+            document.getElementById('rewardTypeTitle').innerText = config.label;
+            document.getElementById('statTypeTitle').innerText = config.label;
+            document.getElementById('trendTypeTitle').innerText = config.label;
+            document.getElementById('displayDate').innerText = "📅 " + new Date().toLocaleDateString();
+            
+            checkAutoReset(); // 檢查是否換日/月等需要自動紀錄
+            autoSync(); 
+            renderGrid();
+            renderRewards();
+            renderStats();
         }
 
-        function checkLines() {
-            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-            let count = 0;
-            wins.forEach(c => { if(status[c[0]] && status[c[1]] && status[c[2]]) count++; });
-            return count;
-        }
-
-        function calculateTodayPoints() {
-            let pts = 0;
-            const done = status.filter(s=>s).length;
-            pts += done * 10;
-            pts += checkLines() * 50;
-            if(done === 9) pts += 200;
-            return pts;
-        }
-
-        function render() {
+        function renderGrid() {
+            const config = modes[currentMode];
             const grid = document.getElementById('bingoGrid');
+            const totalCells = config.size * config.size;
+
+            let tasks = JSON.parse(localStorage.getItem(`tasks_${currentMode}`)) || Array(totalCells).fill("新任務");
+            let status = JSON.parse(localStorage.getItem(`status_${currentMode}`)) || Array(totalCells).fill(false);
+            let syncedStatus = JSON.parse(localStorage.getItem(`syncedStatus_${currentMode}`)) || Array(totalCells).fill(false);
+
+            grid.className = `grid grid-${config.size}x${config.size}`;
             grid.innerHTML = '';
+
             tasks.forEach((text, i) => {
                 const cell = document.createElement('div');
                 cell.className = `cell ${status[i] ? 'completed' : ''}`;
                 cell.innerHTML = `<span>${text}</span><div class="edit-icon">✎</div>`;
+                
                 cell.onclick = () => {
-                    const oldL = checkLines();
+                    const oldL = checkLines(status, config.size);
                     status[i] = !status[i];
-                    const newL = checkLines();
-                    if(status.every(s=>s)) alert("🏆 大滿貫！\n" + rewards.full);
-                    else if(newL > oldL) alert(`🎉 達成 ${newL} 條連線！\n獎勵：${rewards.lines[newL-1]}`);
-                    localStorage.setItem('bingoStatus', JSON.stringify(status));
-                    render();
+                    const newL = checkLines(status, config.size);
+                    
+                    localStorage.setItem(`status_${currentMode}`, JSON.stringify(status));
+                    handleAutoReward(status, oldL, newL);
+                    
+                    // 即時計入成就榜與同步
+                    updateTaskStatsAndSync();
+                    renderGrid();
                 };
+
                 cell.querySelector('.edit-icon').onclick = (e) => {
                     e.stopPropagation();
-                    const v = prompt("修改任務內容:", tasks[i]);
-                    if(v) { tasks[i] = v; syncedStatus[i] = false; localStorage.setItem('bingoTasks', JSON.stringify(tasks)); render(); }
+                    const v = prompt("修改:", tasks[i]);
+                    if(v) {
+                        tasks[i] = v;
+                        // 如果改了名字，該格的同步狀態重置
+                        let ss = JSON.parse(localStorage.getItem(`syncedStatus_${currentMode}`)) || Array(totalCells).fill(false);
+                        ss[i] = false;
+                        localStorage.setItem(`tasks_${currentMode}`, JSON.stringify(tasks));
+                        localStorage.setItem(`syncedStatus_${currentMode}`, JSON.stringify(ss));
+                        renderGrid();
+                    }
                 };
                 grid.appendChild(cell);
             });
-            renderStats();
+        }
+
+        function renderRewards() {
+            const container = document.getElementById('rewardInputs');
+            const config = modes[currentMode];
+            let r = JSON.parse(localStorage.getItem(`rewards_${currentMode}`)) || { lines: Array(12).fill(""), full: "" };
+            container.innerHTML = '';
+            for(let i=1; i<=config.lines; i++) {
+                container.innerHTML += `<div class="reward-group"><label>${i} 條線</label><input type="text" value="${r.lines[i-1] || ''}" onchange="saveReward(${i-1}, this.value)"></div>`;
+            }
+            container.innerHTML += `<div class="reward-group"><label><b>全滿獎勵</b></label><input type="text" value="${r.full || ''}" onchange="saveRewardFull(this.value)"></div>`;
+        }
+
+        function saveReward(idx, val) {
+            let r = JSON.parse(localStorage.getItem(`rewards_${currentMode}`)) || { lines: Array(12).fill(""), full: "" };
+            r.lines[idx] = val;
+            localStorage.setItem(`rewards_${currentMode}`, JSON.stringify(r));
+        }
+
+        function saveRewardFull(val) {
+            let r = JSON.parse(localStorage.getItem(`rewards_${currentMode}`)) || { lines: Array(12).fill(""), full: "" };
+            r.full = val;
+            localStorage.setItem(`rewards_${currentMode}`, JSON.stringify(r));
         }
 
         function renderStats() {
-            document.getElementById('taskStatsList').innerHTML = Object.entries(taskStats).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="stat-item"><span>${n}</span><b>${c} 次</b></div>`).join('');
-            document.getElementById('historyList').innerHTML = history.slice(0,5).map(h => `<div class="history-bar"><div style="font-size:10px; width:65px">${h.date}</div><div class="bar-bg"><div class="bar-fill" style="width:${(h.count/9)*100}%"></div></div><div style="font-size:10px;">${h.count}</div></div>`).join('');
+            // 成就榜
+            const stats = JSON.parse(localStorage.getItem(`taskStats_${currentMode}`)) || {};
+            const statsList = document.getElementById('taskStatsList');
+            const sorted = Object.entries(stats).sort((a,b) => b[1] - a[1]);
+            statsList.innerHTML = sorted.length ? sorted.map(([n,c]) => `<div class="stat-item"><span>${n}</span><b>${c} 次</b></div>`).join('') : "尚未有紀錄";
+
+            // 趨勢圖
+            const hist = JSON.parse(localStorage.getItem(`history_${currentMode}`)) || [];
+            const histList = document.getElementById('historyList');
+            const max = modes[currentMode].size * modes[currentMode].size;
+            histList.innerHTML = hist.slice(0, 5).map(item => `
+                <div class="history-bar">
+                    <div style="font-size:10px; width:65px">${item.date}</div>
+                    <div class="bar-bg"><div class="bar-fill" style="width:${(item.count/max)*100}%"></div></div>
+                    <div style="font-size:10px; width:20px">${item.count}</div>
+                </div>`).join('');
         }
 
-        async function manualSave() {
-            if(!userName) { alert("請先填寫您的競賽暱稱！"); return; }
-            const todayPoints = calculateTodayPoints();
-            
-            // 處理結算邏輯
-            processEndOfDay(todayStr, false);
-            
-            // 這裡簡單化處理積分：結算時直接按比例增加積分
-            // (注意：重複結算在目前的單機邏輯中會重複加分，建議手動上傳時自己衡量)
-            totalScore += todayPoints;
-            localStorage.setItem('bingoTotalScore', totalScore);
-            document.getElementById('personalScore').innerHTML = `累計積分：${totalScore} <span class="pts-badge">Rank Up!</span>`;
+        function updateTaskStatsAndSync() {
+            const config = modes[currentMode];
+            let tasks = JSON.parse(localStorage.getItem(`tasks_${currentMode}`)) || [];
+            let status = JSON.parse(localStorage.getItem(`status_${currentMode}`)) || [];
+            let synced = JSON.parse(localStorage.getItem(`syncedStatus_${currentMode}`)) || Array(tasks.length).fill(false);
+            let stats = JSON.parse(localStorage.getItem(`taskStats_${currentMode}`)) || {};
 
-            try {
-                await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ name: userName, score: totalScore }) });
-                alert(`結算並同步成功！今日戰果積分：${todayPoints}`);
-                fetchLeaderboard();
-            } catch(e) { alert("同步至排行榜失敗，但本地紀錄已保存。"); }
-            render();
-        }
-
-        function processEndOfDay(dateLabel, clearGrid) {
-            status.forEach((isDone, index) => {
-                if(isDone && !syncedStatus[index]) {
-                    taskStats[tasks[index]] = (taskStats[tasks[index]] || 0) + 1;
-                    syncedStatus[index] = true;
+            status.forEach((done, i) => {
+                if(done && !synced[i]) {
+                    const name = tasks[i];
+                    stats[name] = (stats[name] || 0) + 1;
+                    synced[i] = true;
                 }
             });
-            const doneCount = status.filter(s=>s).length;
-            if(history.length > 0 && history[0].date === dateLabel) history[0].count = doneCount;
-            else history.unshift({ date: dateLabel, count: doneCount });
+
+            localStorage.setItem(`taskStats_${currentMode}`, JSON.stringify(stats));
+            localStorage.setItem(`syncedStatus_${currentMode}`, JSON.stringify(synced));
             
-            localStorage.setItem('taskStats', JSON.stringify(taskStats));
-            localStorage.setItem('bingoHistory', JSON.stringify(history));
-            localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
-            
-            if(clearGrid) {
-                status = new Array(9).fill(false);
-                syncedStatus = new Array(9).fill(false);
-                localStorage.setItem('bingoStatus', JSON.stringify(status));
-                localStorage.setItem('syncedStatus', JSON.stringify(syncedStatus));
+            // 更新趨勢紀錄（當前）
+            updateHistory(new Date().toLocaleDateString(), status.filter(s=>s).length);
+            autoSync();
+            renderStats();
+        }
+
+        function updateHistory(dateLabel, count) {
+            let hist = JSON.parse(localStorage.getItem(`history_${currentMode}`)) || [];
+            if(hist.length > 0 && hist[0].date === dateLabel) {
+                hist[0].count = count;
+            } else {
+                hist.unshift({ date: dateLabel, count: count });
+            }
+            if(hist.length > 30) hist.pop();
+            localStorage.setItem(`history_${currentMode}`, JSON.stringify(hist));
+        }
+
+        function checkAutoReset() {
+            const lastOpen = localStorage.getItem(`lastOpen_${currentMode}`);
+            const now = new Date().toLocaleDateString();
+            if(lastOpen && lastOpen !== now) {
+                // 自動換期：重置格子與同步狀態，但保留統計
+                const size = modes[currentMode].size;
+                localStorage.setItem(`status_${currentMode}`, JSON.stringify(Array(size*size).fill(false)));
+                localStorage.setItem(`syncedStatus_${currentMode}`, JSON.stringify(Array(size*size).fill(false)));
+            }
+            localStorage.setItem(`lastOpen_${currentMode}`, now);
+        }
+
+        function checkLines(status, size) {
+            let count = 0;
+            for (let i = 0; i < size; i++) {
+                let r=true, c=true;
+                for (let j = 0; j < size; j++) {
+                    if (!status[i * size + j]) r = false;
+                    if (!status[j * size + i]) c = false;
+                }
+                if (r) count++; if (c) count++;
+            }
+            let d1=true, d2=true;
+            for (let i = 0; i < size; i++) {
+                if (!status[i * size + i]) d1 = false;
+                if (!status[i * size + (size - 1 - i)]) d2 = false;
+            }
+            if (d1) count++; if (d2) count++;
+            return count;
+        }
+
+        function handleAutoReward(status, oldL, newL) {
+            let r = JSON.parse(localStorage.getItem(`rewards_${currentMode}`)) || { lines: [], full: "" };
+            if (status.every(s => s)) {
+                if(r.full) alert("🎊 大圓滿達成！\n獎勵：" + r.full);
+            } else if (newL > oldL) {
+                let msg = r.lines[newL-1];
+                if(msg) alert(`🎉 達成 ${newL} 條連線！\n獎勵：` + msg);
             }
         }
 
-async function fetchLeaderboard() {
-    try {
-        // 加上 cache: 'no-cache' 確保每次都讀到最新的排名
-        const res = await fetch(GAS_URL, { cache: 'no-cache' });
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        const list = document.getElementById('leaderboard');
-        if (data.length === 0) {
-            list.innerHTML = "尚未有排名數據";
-            return;
+        function autoSync() {
+            let grandTotal = 0;
+            Object.keys(modes).forEach(m => {
+                const s = JSON.parse(localStorage.getItem(`status_${m}`)) || [];
+                grandTotal += s.filter(x=>x).length * 10;
+                grandTotal += checkLines(s, modes[m].size) * 50;
+            });
+            totalScore = grandTotal;
+            localStorage.setItem('bingoTotalScore', totalScore);
+            document.getElementById('personalScore').innerText = `積分：${totalScore}`;
+            if(userName && GAS_URL) {
+                fetch(GAS_URL, { method: "POST", mode: 'no-cors', body: JSON.stringify({ name: userName, score: totalScore }) });
+            }
         }
-        list.innerHTML = data.map((item, idx) => `
-            <div class="rank-item">
-                <span>${idx + 1}. ${item.name}</span>
-                <span style="color:#d4af37; font-weight:bold;">${item.score} pts</span>
-            </div>`).join('');
-    } catch(e) { 
-        document.getElementById('leaderboard').innerText = "連線中或暫無數據..."; 
-    }
-}
+
+        function saveUserName() {
+            userName = document.getElementById('userName').value;
+            localStorage.setItem('bingoUserName', userName);
+            autoSync();
+            fetchLeaderboard();
+        }
+
+        async function fetchLeaderboard() {
+            try {
+                const res = await fetch(GAS_URL, { cache: 'no-cache' });
+                const data = await res.json();
+                document.getElementById('leaderboard').innerHTML = data.map((item, idx) => `
+                    <div class="rank-item"><span>${idx + 1}. ${item.name}</span><b>${item.score} pts</b></div>
+                `).join('');
+            } catch(e) { document.getElementById('leaderboard').innerText = "排行榜同步中..."; }
+        }
 
         function exportData() {
-            const data = btoa(unescape(encodeURIComponent(JSON.stringify({ tasks, status, syncedStatus, history, taskStats, totalScore, userName, rewards }))));
-            document.getElementById('backupArea').value = data;
-            alert("備份代碼已產生，請複製保存。");
+            let bundle = {};
+            for(let i=0; i<localStorage.length; i++){
+                let k = localStorage.key(i);
+                bundle[k] = localStorage.getItem(k);
+            }
+            document.getElementById('backupArea').value = btoa(unescape(encodeURIComponent(JSON.stringify(bundle))));
+            alert("備份代碼已產生！");
         }
 
         function importData() {
             try {
-                const decoded = JSON.parse(decodeURIComponent(escape(atob(document.getElementById('backupArea').value))));
-                if(confirm("確定要導入嗎？這會覆蓋目前所有進度。")) {
-                    localStorage.setItem('bingoTasks', JSON.stringify(decoded.tasks));
-                    localStorage.setItem('bingoStatus', JSON.stringify(decoded.status));
-                    localStorage.setItem('bingoHistory', JSON.stringify(decoded.history));
-                    localStorage.setItem('taskStats', JSON.stringify(decoded.taskStats));
-                    localStorage.setItem('bingoTotalScore', decoded.totalScore);
-                    localStorage.setItem('bingoUserName', decoded.userName);
+                const bundle = JSON.parse(decodeURIComponent(escape(atob(document.getElementById('backupArea').value))));
+                if(confirm("確定還原嗎？這會覆蓋現有資料。")) {
+                    localStorage.clear();
+                    Object.keys(bundle).forEach(k => localStorage.setItem(k, bundle[k]));
                     location.reload();
                 }
-            } catch(e) { alert("無效的代碼！"); }
+            } catch(e) { alert("代碼錯誤"); }
         }
     </script>
 </body>
